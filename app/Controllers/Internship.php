@@ -238,35 +238,32 @@ class Internship extends BaseController
     public function show(string $applicationCode): string|\CodeIgniter\HTTP\ResponseInterface
     {
         $user = $this->currentUser();
-        if (ctype_digit($applicationCode)) {
-            $legacy = (new InternshipApplicationModel())->where('id', (int) $applicationCode)->where('deleted_at', null)->first();
-            if ($legacy && (int) $legacy['user_id'] === $user['id']) {
-                return redirect()->to(site_url('applications/' . $legacy['application_code']), 301);
-            }
-        }
-        $application = $this->applicationByPublicCode($applicationCode);
+        $applicationCode = strtoupper(trim($applicationCode));
 
+        if (preg_match('/^APP-[A-Z0-9]{8,16}$/', $applicationCode) !== 1 && ctype_digit($applicationCode) === false) {
+            return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
+        }
+
+        $application = $this->applicationByPublicCode($applicationCode, $user['id']);
         if (! $application) {
             return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
         }
 
-        if ((int) $application['user_id'] !== $user['id']) {
-            return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
-        }
-
         return view('internship/show', [
-            'title' => 'Application Details',
+            'title' => 'View Application',
             'user' => $user,
             'application' => $application,
+            'currentPage' => 'applications',
         ]);
     }
 
     public function edit(string $applicationCode): string|\CodeIgniter\HTTP\ResponseInterface
     {
         $user = $this->currentUser();
-        $application = $this->applicationByPublicCode($applicationCode);
+        $applicationCode = strtoupper(trim($applicationCode));
+        $application = $this->applicationByPublicCode($applicationCode, $user['id']);
 
-        if (! $application || (int) $application['user_id'] !== $user['id']) {
+        if (! $application) {
             return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
         }
 
@@ -274,18 +271,222 @@ class Internship extends BaseController
             return redirect()->to(site_url('applications/' . $application['application_code']))->with('error', 'Editing is currently locked. Please contact the administrator if a correction is required.');
         }
 
-        return $this->show($applicationCode);
+        return view('internship/edit', [
+            'title' => 'Edit Application',
+            'user' => $user,
+            'application' => $application,
+            'universities' => $this->editUniversitiesForApplication((int) ($application['university_id'] ?? 0)),
+            'currentPage' => 'applications',
+        ]);
     }
 
-    private function applicationByPublicCode(string $applicationCode): ?array
+    public function updateApplication(string $applicationCode)
+    {
+        $user = $this->currentUser();
+        $applicationCode = strtoupper(trim($applicationCode));
+        $application = $this->applicationByPublicCode($applicationCode, $user['id']);
+
+        if (! $application) {
+            return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
+        }
+
+        if ((int) ($application['edit_enabled'] ?? 0) !== 1) {
+            return redirect()->to(site_url('applications/' . $application['application_code']))->with('error', 'Editing is currently locked. Please contact the administrator if a correction is required.');
+        }
+
+        $round = $this->eligibleRoundByCode((string) ($application['round_code'] ?? ''));
+        if (! $round) {
+            return redirect()->to(site_url('applications/' . $application['application_code']))->with('error', 'That application call is no longer available.');
+        }
+
+        if (! $this->validate($this->applicationRules())) {
+            return redirect()->to(site_url('applications/' . $application['application_code'] . '/edit'))
+                ->withInput($this->editApplicationInput($application))
+                ->with('errors', $this->validator->getErrors())
+                ->with('error', 'Please check the highlighted fields.');
+        }
+
+        $input = $this->normalizedApplicationInput();
+        if (! $this->universityExistsAndActive((int) $input['university_id'])) {
+            return redirect()->to(site_url('applications/' . $application['application_code'] . '/edit'))
+                ->withInput($this->editApplicationInput($application))
+                ->with('errors', ['university_id' => 'Please choose a valid university.'])
+                ->with('error', 'Please check the highlighted fields.');
+        }
+        if ($input['internship_type'] !== 'Capstone') {
+            $input['team_member_count'] = null;
+        }
+
+        if ($input['internship_end_date'] <= $input['internship_start_date']) {
+            return redirect()->to(site_url('applications/' . $application['application_code'] . '/edit'))
+                ->withInput($this->editApplicationInput($application))
+                ->with('errors', ['internship_end_date' => 'The internship end date must be later than the start date.'])
+                ->with('error', 'Please check the highlighted fields.');
+        }
+
+        $eligibility = $this->academicEligibility((string) $input['current_cgpa'], (string) $input['total_credits'], (string) $input['earned_credits']);
+        if ($eligibility['state'] !== 'eligible') {
+            return redirect()->to(site_url('applications/' . $application['application_code'] . '/edit'))
+                ->withInput($this->editApplicationInput($application))
+                ->with('errors', ['current_cgpa' => $eligibility['message']])
+                ->with('error', $eligibility['message']);
+        }
+
+        try {
+            $db = db_connect();
+            $db->transStart();
+
+            $applicationModel = new InternshipApplicationModel();
+            $updated = $applicationModel->where('id', (int) $application['id'])
+                ->where('user_id', $user['id'])
+                ->where('edit_enabled', 1)
+                ->where('deleted_at', null)
+                ->set([
+                'student_id' => trim((string) $input['student_id']),
+                'university_id' => (int) $input['university_id'],
+                'department_id' => null,
+                'department' => $input['department'],
+                'other_department' => $input['department'] === 'Other' ? trim((string) $input['other_department']) : null,
+                'current_cgpa' => $input['current_cgpa'],
+                'total_credits' => $input['total_credits'],
+                'earned_credits' => $input['earned_credits'],
+                'credit_completion_percentage' => $eligibility['credit_completion_percentage'],
+                'information_declaration' => 1,
+                'declared_at' => date('Y-m-d H:i:s'),
+                'internship_type' => $input['internship_type'],
+                'team_member_count' => $input['team_member_count'],
+                'supervisor_name' => trim((string) $input['supervisor_name']),
+                'supervisor_email' => strtolower(trim((string) $input['supervisor_email'])),
+                'supervisor_university' => trim((string) $input['supervisor_university']),
+                'supervisor_department' => trim((string) $input['supervisor_department']),
+                'supervisor_designation' => trim((string) $input['supervisor_designation']),
+                'supervisor_phone' => $this->normalizeBangladeshiPhone((string) $input['supervisor_phone']),
+                'internship_start_date' => $input['internship_start_date'],
+                'internship_end_date' => $input['internship_end_date'],
+                'placement_organization_name' => trim((string) $input['placement_organization_name']),
+                'organization_website_url' => $input['organization_website_url'] !== '' ? trim((string) $input['organization_website_url']) : null,
+                'mentor_name' => trim((string) $input['mentor_name']),
+                'mentor_email' => strtolower(trim((string) $input['mentor_email'])),
+                'status' => 'Submitted',
+                'updated_at' => date('Y-m-d H:i:s'),
+                'edit_enabled' => 0,
+                'edit_enabled_at' => null,
+                'edit_enabled_by' => null,
+            ])
+                ->update();
+
+            if ($updated === false) {
+                throw new \RuntimeException('Application update failed.');
+            }
+
+            $this->logApplicationAction(
+                'application_resubmitted',
+                $application['application_code'],
+                null,
+                [
+                    'application_code' => $application['application_code'],
+                    'user_id' => $user['id'],
+                    'edit_enabled' => 0,
+                    'declared_at' => date('Y-m-d H:i:s'),
+                ]
+            );
+
+            $db->transComplete();
+            if ($db->transStatus() === false) {
+                throw new \RuntimeException('Application transaction failed.');
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Internship update failed: {message}', ['message' => $e->getMessage()]);
+            return redirect()->to(site_url('applications/' . $application['application_code'] . '/edit'))
+                ->withInput($this->editApplicationInput($application))
+                ->with('error', 'Unable to update your application. Please try again.');
+        }
+
+        return redirect()->to(site_url('applications/' . $application['application_code']))->with('success', 'Your application has been updated successfully.');
+    }
+
+    private function applicationByPublicCode(string $applicationCode, int $userId): ?array
     {
         return (new InternshipApplicationModel())
-            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title, users.gender_identity as profile_gender_identity, users.disability_status, users.disability_type, users.ethnic_minority_status, users.ethnic_group_name')
-            ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
-            ->join('users', 'users.id = internship_applications.user_id')
+            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title, universities.name as university_name, universities.type as university_type, users.gender_identity as profile_gender_identity, users.disability_status, users.disability_type, users.ethnic_minority_status, users.ethnic_group_name')
+            ->join('application_rounds', 'application_rounds.id = internship_applications.round_id', 'left')
+            ->join('universities', 'universities.id = internship_applications.university_id', 'left')
+            ->join('users', 'users.id = internship_applications.user_id', 'left')
             ->where('internship_applications.application_code', $applicationCode)
+            ->where('internship_applications.user_id', $userId)
             ->where('internship_applications.deleted_at', null)
             ->first();
+    }
+
+    private function editUniversitiesForApplication(int $selectedUniversityId): array
+    {
+        $model = new UniversityModel();
+        $universities = $model->where('is_active', 1)->orderBy('type', 'asc')->orderBy('name', 'asc')->findAll();
+
+        if ($selectedUniversityId > 0) {
+            $selected = $model->find($selectedUniversityId);
+            if ($selected && (int) ($selected['is_active'] ?? 0) !== 1) {
+                array_unshift($universities, $selected);
+            }
+        }
+
+        $seen = [];
+        $unique = [];
+        foreach ($universities as $university) {
+            $id = (string) ($university['id'] ?? '');
+            if ($id === '' || isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
+            $unique[] = $university;
+        }
+
+        return $unique;
+    }
+
+    private function logApplicationAction(string $action, string $entityPublicCode, ?string $reason, array $metadata = []): void
+    {
+        $db = db_connect();
+        if (! $db->tableExists('admin_action_logs')) {
+            return;
+        }
+
+        $db->table('admin_action_logs')->insert([
+            'admin_user_id' => null,
+            'action' => $action,
+            'entity_type' => 'application',
+            'entity_public_code' => $entityPublicCode,
+            'reason' => $reason,
+            'metadata' => json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    private function editApplicationInput(array $application): array
+    {
+        return [
+            'student_id' => $application['student_id'] ?? '',
+            'university_id' => $application['university_id'] ?? '',
+            'department' => $application['department'] ?? '',
+            'other_department' => $application['other_department'] ?? '',
+            'current_cgpa' => $application['current_cgpa'] ?? '',
+            'total_credits' => $application['total_credits'] ?? '',
+            'earned_credits' => $application['earned_credits'] ?? '',
+            'internship_type' => $application['internship_type'] ?? '',
+            'team_member_count' => $application['team_member_count'] ?? '',
+            'supervisor_name' => $application['supervisor_name'] ?? '',
+            'supervisor_email' => $application['supervisor_email'] ?? '',
+            'supervisor_university' => $application['supervisor_university'] ?? '',
+            'supervisor_department' => $application['supervisor_department'] ?? '',
+            'supervisor_designation' => $application['supervisor_designation'] ?? '',
+            'supervisor_phone' => $application['supervisor_phone'] ?? '',
+            'internship_start_date' => $application['internship_start_date'] ?? '',
+            'internship_end_date' => $application['internship_end_date'] ?? '',
+            'placement_organization_name' => $application['placement_organization_name'] ?? '',
+            'organization_website_url' => $application['organization_website_url'] ?? '',
+            'mentor_name' => $application['mentor_name'] ?? '',
+            'mentor_email' => $application['mentor_email'] ?? '',
+        ];
     }
 
     public function rounds(): string

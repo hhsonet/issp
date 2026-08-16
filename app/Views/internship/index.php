@@ -27,7 +27,18 @@
                             <td class="py-4 pr-4"><?= esc($application['placement_organization_name']) ?></td>
                             <td class="py-4 pr-4"><?= esc($application['status']) ?></td>
                             <td class="py-4 pr-4"><?= esc($application['submitted_at']) ?></td>
-                            <td class="py-4 pr-4"><a class="font-semibold text-brand-700" href="<?= site_url('applications/' . $application['application_code']) ?>">View</a></td>
+                            <td class="py-4 pr-4">
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <?php if (! empty($application['application_code'])): ?>
+                                        <a class="font-semibold text-brand-700" href="<?= site_url('applications/' . $application['application_code']) ?>">View</a>
+                                        <?php if ((int) ($application['edit_enabled'] ?? 0) === 1): ?>
+                                            <a class="inline-flex items-center rounded-2xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-700" href="<?= site_url('applications/' . $application['application_code'] . '/edit') ?>">Edit draft</a>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <span class="text-slate-400">Unavailable</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
                         </tr>
                     <?php endforeach; endif; ?>
                     </tbody>

@@ -12,6 +12,7 @@
     <nav class="flex-1 space-y-1 p-4 text-sm" aria-label="Admin navigation">
         <a class="block rounded-2xl px-4 py-3 <?= $currentPage === 'dashboard' ? 'bg-white text-slate-950' : 'text-slate-300 hover:bg-white/5 hover:text-white' ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
         <a class="block rounded-2xl px-4 py-3 <?= in_array($currentPage, ['calls', 'calls-create']) ? 'bg-white text-slate-950' : 'text-slate-300 hover:bg-white/5 hover:text-white' ?>" href="<?= site_url('admin/calls') ?>">Application Calls</a>
+        <a class="block rounded-2xl px-4 py-3 <?= $currentPage === 'applications' ? 'bg-white text-slate-950' : 'text-slate-300 hover:bg-white/5 hover:text-white' ?>" href="<?= site_url('admin/applications') ?>">Applications</a>
         <a class="block rounded-2xl px-4 py-3 <?= $currentPage === 'users' ? 'bg-white text-slate-950' : 'text-slate-300 hover:bg-white/5 hover:text-white' ?>" href="<?= site_url('admin/users') ?>">Users</a>
         <a class="block rounded-2xl px-4 py-3 text-slate-300 hover:bg-white/5 hover:text-white" href="<?= site_url('dashboard') ?>">View Website</a>
     </nav>

@@ -235,10 +235,13 @@ class Dashboard extends BaseController
                     ->getResultArray();
 
                 $applicationHistory = $db->table('internship_applications ia')
-                    ->select('ia.id, ia.status, ia.submitted_at, ar.round_code, ar.title as round_title')
+                    ->select('ia.application_code, ia.status, ia.submitted_at, ia.internship_type, ia.edit_enabled, ar.round_code, ar.title as round_title, u.name as university_name')
                     ->join('application_rounds ar', 'ar.id = ia.round_id', 'left')
+                    ->join('universities u', 'u.id = ia.university_id', 'left')
                     ->where('ia.user_id', $user['user_id'])
+                    ->where('ia.deleted_at', null)
                     ->orderBy('ia.submitted_at', 'desc')
+                    ->limit(5)
                     ->get()
                     ->getResultArray();
             }
@@ -270,6 +273,7 @@ class Dashboard extends BaseController
                 return $round;
             }, $openCalls),
             'applicationHistory' => $applicationHistory,
+            'hasOpenCalls' => ! empty($openCalls),
             'announcements' => [
                 'Application guidelines are now available',
                 'Check the required documents before applying',

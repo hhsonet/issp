@@ -70,7 +70,7 @@ $departmentOptions = [
                     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><span class="text-xs uppercase text-slate-500">Status</span><strong class="mt-1 block"><?= esc($application['status']) ?></strong></div>
                 </div>
                 <div class="mt-6">
-                    <a class="inline-flex rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white" href="<?= site_url('applications/' . $application['application_code']) ?>">View Application Details</a>
+                    <a class="inline-flex rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white" href="<?= site_url('applications/' . $application['application_code']) ?>">View Application</a>
                 </div>
             </div>
         <?php else: ?>
