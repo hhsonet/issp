@@ -239,18 +239,12 @@ class Internship extends BaseController
     {
         $user = $this->currentUser();
         if (ctype_digit($applicationCode)) {
-            $legacy = (new InternshipApplicationModel())->find((int) $applicationCode);
+            $legacy = (new InternshipApplicationModel())->where('id', (int) $applicationCode)->where('deleted_at', null)->first();
             if ($legacy && (int) $legacy['user_id'] === $user['id']) {
                 return redirect()->to(site_url('applications/' . $legacy['application_code']), 301);
             }
         }
-        $application = (new InternshipApplicationModel())
-            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title, users.gender_identity as profile_gender_identity, users.disability_status, users.disability_type, users.ethnic_minority_status, users.ethnic_group_name')
-            ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
-            ->join('users', 'users.id = internship_applications.user_id')
-            ->where('internship_applications.application_code', $applicationCode)
-            ->where('internship_applications.deleted_at', null)
-            ->first();
+        $application = $this->applicationByPublicCode($applicationCode);
 
         if (! $application) {
             return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
@@ -270,12 +264,7 @@ class Internship extends BaseController
     public function edit(string $applicationCode): string|\CodeIgniter\HTTP\ResponseInterface
     {
         $user = $this->currentUser();
-        $application = (new InternshipApplicationModel())
-            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title')
-            ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
-            ->where('internship_applications.application_code', $applicationCode)
-            ->where('internship_applications.deleted_at', null)
-            ->first();
+        $application = $this->applicationByPublicCode($applicationCode);
 
         if (! $application || (int) $application['user_id'] !== $user['id']) {
             return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
@@ -286,6 +275,17 @@ class Internship extends BaseController
         }
 
         return $this->show($applicationCode);
+    }
+
+    private function applicationByPublicCode(string $applicationCode): ?array
+    {
+        return (new InternshipApplicationModel())
+            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title, users.gender_identity as profile_gender_identity, users.disability_status, users.disability_type, users.ethnic_minority_status, users.ethnic_group_name')
+            ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
+            ->join('users', 'users.id = internship_applications.user_id')
+            ->where('internship_applications.application_code', $applicationCode)
+            ->where('internship_applications.deleted_at', null)
+            ->first();
     }
 
     public function rounds(): string

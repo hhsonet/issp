@@ -57,10 +57,6 @@ class AddPublicApplicationCodes extends Migration
             $this->forge->addColumn('internship_applications', $fields);
         }
 
-        if (! $this->db->getIndexData('internship_applications')['application_code_unique'] ?? false) {
-            $this->forge->addUniqueKey('application_code', 'application_code_unique');
-        }
-
         $builder = $this->db->table('internship_applications');
         $rows = $builder->select('id, application_code')->where('application_code IS NULL', null, false)->get()->getResultArray();
         foreach ($rows as $row) {
@@ -69,6 +65,10 @@ class AddPublicApplicationCodes extends Migration
                 $code = 'APP-' . strtoupper(bin2hex(random_bytes(4)));
             }
             $builder->where('id', $row['id'])->update(['application_code' => $code]);
+        }
+
+        if (! $this->indexExists('internship_applications', 'application_code_unique')) {
+            $this->db->query('ALTER TABLE `internship_applications` ADD UNIQUE KEY `application_code_unique` (`application_code`)');
         }
     }
 
@@ -79,5 +79,17 @@ class AddPublicApplicationCodes extends Migration
                 $this->forge->dropColumn('internship_applications', $field);
             }
         }
+    }
+
+    private function indexExists(string $table, string $indexName): bool
+    {
+        $indexes = $this->db->query('SHOW INDEX FROM `' . $table . '`')->getResultArray();
+        foreach ($indexes as $index) {
+            if (($index['Key_name'] ?? '') === $indexName) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
