@@ -44,7 +44,7 @@ class Auth extends BaseController
         $password = (string) $this->request->getPost('password');
         $user = (new UserModel())->where('email', $email)->first();
 
-        if (! $user || ! password_verify($password, $user['password_hash']) || ! in_array($user['status'] ?? '', ['active'], true) || ! empty($user['deleted_at'])) {
+        if (! $user || ! password_verify($password, $user['password_hash']) || ! in_array($user['status'] ?? '', ['active'], true) || ! (bool) ($user['is_active'] ?? 1) || ! empty($user['deleted_at'])) {
             return redirect()->back()
                 ->withInput(['email' => $email])
                 ->with('error', 'Invalid email address or password.');
@@ -56,6 +56,8 @@ class Auth extends BaseController
             'user_id' => $user['id'],
             'full_name' => $user['full_name'],
             'email' => $user['email'],
+            'role' => $user['role'] ?? 'user',
+            'is_active' => (bool) ($user['is_active'] ?? 1),
         ]);
 
         $userModel = new UserModel();
@@ -66,7 +68,9 @@ class Auth extends BaseController
 
         session()->remove('return_to');
 
-        return redirect()->to(site_url('dashboard'))
+        $redirectTo = (session('role') ?? 'user') === 'admin' ? site_url('admin/dashboard') : site_url('dashboard');
+
+        return redirect()->to($redirectTo)
             ->with('success', 'Signed in successfully.');
     }
 

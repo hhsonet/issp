@@ -12,6 +12,7 @@ class Internship extends BaseController
 {
     private const GENDER_IDENTITIES = ['Woman', 'Man', 'Gender Diverse Individuals'];
     private const INTERNSHIP_TYPES = ['Industry', 'Capstone'];
+    private const ROUND_STATUSES = ['Draft', 'Open', 'Closed'];
 
     public function apply(): string
     {
@@ -46,28 +47,28 @@ class Internship extends BaseController
             return redirect()->to(site_url('apply'))->with('error', 'There is currently no open call for applications.');
         }
 
-        if (! $this->validate($this->rules())) {
+        if (! $this->validate($this->applicationRules())) {
             return redirect()->to(site_url('apply'))
-                ->withInput($this->preserveInput())
+                ->withInput($this->preserveApplicationInput())
                 ->with('errors', $this->validator->getErrors())
                 ->with('error', 'Please check the highlighted fields.');
         }
 
-        $input = $this->normalizedInput();
+        $input = $this->normalizedApplicationInput();
         if ($input['internship_type'] !== 'Capstone') {
             $input['team_member_count'] = null;
         }
 
         if ($input['internship_end_date'] <= $input['internship_start_date']) {
             return redirect()->to(site_url('apply'))
-                ->withInput($this->preserveInput())
+                ->withInput($this->preserveApplicationInput())
                 ->with('errors', ['internship_end_date' => 'The internship end date must be later than the start date.'])
                 ->with('error', 'Please check the highlighted fields.');
         }
 
         if (! $this->departmentMatchesUniversity((int) $input['university_id'], (int) $input['department_id'])) {
             return redirect()->to(site_url('apply'))
-                ->withInput($this->preserveInput())
+                ->withInput($this->preserveApplicationInput())
                 ->with('errors', ['department_id' => 'Please choose a department that belongs to the selected university.'])
                 ->with('error', 'Please check the highlighted fields.');
         }
@@ -125,7 +126,7 @@ class Internship extends BaseController
                 $message = 'You have already applied for this round.';
             }
             log_message('error', 'Internship submit failed: {message}', ['message' => $e->getMessage()]);
-            return redirect()->to(site_url('apply'))->withInput($this->preserveInput())->with('error', $message);
+            return redirect()->to(site_url('apply'))->withInput($this->preserveApplicationInput())->with('error', $message);
         }
 
         return redirect()->to(site_url('applications'))->with('success', 'Your application has been submitted successfully.');
@@ -135,10 +136,10 @@ class Internship extends BaseController
     {
         $user = $this->currentUser();
         $applications = (new InternshipApplicationModel())
-            ->select('internship_applications.*, application_rounds.round_number, application_rounds.title as round_title')
+            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title')
             ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
             ->where('internship_applications.user_id', $user['id'])
-            ->orderBy('application_rounds.round_number', 'desc')
+            ->orderBy('application_rounds.round_code', 'desc')
             ->findAll();
 
         return view('internship/index', [
@@ -153,7 +154,7 @@ class Internship extends BaseController
     {
         $user = $this->currentUser();
         $application = (new InternshipApplicationModel())
-            ->select('internship_applications.*, application_rounds.round_number, application_rounds.title as round_title')
+            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title')
             ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
             ->where('internship_applications.id', $id)
             ->first();
@@ -175,54 +176,207 @@ class Internship extends BaseController
 
     public function rounds(): string
     {
-        if (! session('is_admin')) {
-            return (string) $this->response->setStatusCode(403);
+        return view('internship/rounds', [
+            'title' => 'Application Calls',
+            'rounds' => $this->roundsWithStats(),
+            'round' => null,
+            'mode' => 'create',
+            'errors' => session('errors') ?? [],
+        ]);
+    }
+
+    public function createRound(): string
+    {
+        return view('internship/rounds', [
+            'title' => 'Create Call',
+            'rounds' => $this->roundsWithStats(),
+            'round' => null,
+            'mode' => 'create',
+            'errors' => session('errors') ?? [],
+        ]);
+    }
+
+    public function editRound(int $id): string|\CodeIgniter\HTTP\ResponseInterface
+    {
+        $round = (new ApplicationRoundModel())->find($id);
+
+        if (! $round) {
+            return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
         }
 
         return view('internship/rounds', [
-            'title' => 'Application Rounds',
-            'rounds' => (new ApplicationRoundModel())->orderBy('round_number', 'desc')->findAll(),
+            'title' => 'Edit Call',
+            'rounds' => $this->roundsWithStats(),
+            'round' => $this->decorateRound($round),
+            'mode' => 'edit',
             'errors' => session('errors') ?? [],
         ]);
     }
 
     public function storeRound()
     {
-        if (! session('is_admin')) {
-            return $this->response->setStatusCode(403);
+        return $this->persistRound();
+    }
+
+    public function updateRound(int $id)
+    {
+        return $this->persistRound($id);
+    }
+
+    public function toggleRoundStatus(int $id)
+    {
+        $round = (new ApplicationRoundModel())->find($id);
+        if (! $round) {
+            return redirect()->to(site_url('admin/calls'))->with('error', 'Call not found.');
         }
 
-        if (! $this->validate([
-            'round_number' => 'required|is_natural_no_zero|is_unique[application_rounds.round_number]',
-            'title' => 'required|min_length[3]|max_length[190]',
-            'description' => 'permit_empty|max_length[1000]',
-            'opens_at' => 'required|valid_date[Y-m-d\TH:i]',
-            'closes_at' => 'required|valid_date[Y-m-d\TH:i]',
-            'status' => 'required|in_list[Draft,Open,Closed]',
-        ])) {
+        $desired = trim((string) $this->request->getPost('status'));
+        if (! in_array($desired, self::ROUND_STATUSES, true)) {
+            return redirect()->to(site_url('admin/calls'))->with('error', 'Please check the highlighted fields.');
+        }
+
+        if ($desired === 'Open') {
+            $now = date('Y-m-d H:i:s');
+            if (empty($round['title']) || empty($round['description']) || empty($round['opens_at']) || empty($round['closes_at'])) {
+                return redirect()->to(site_url('admin/calls'))->with('error', 'Please complete the call details before opening it.');
+            }
+            if ($round['closes_at'] <= $round['opens_at']) {
+                return redirect()->to(site_url('admin/calls'))->with('error', 'Closing time must be later than opening time.');
+            }
+            if ($round['closes_at'] < $now) {
+                return redirect()->to(site_url('admin/calls'))->with('error', 'This call has already expired.');
+            }
+        }
+
+        (new ApplicationRoundModel())->update($id, [
+            'status' => $desired,
+            'updated_by' => (int) session('user_id'),
+        ]);
+
+        return redirect()->to(site_url('admin/calls'))->with('success', $desired === 'Open' ? 'Call opened successfully.' : 'Call closed successfully.');
+    }
+
+    private function persistRound(?int $id = null)
+    {
+        if (! $this->validate($this->roundRules($id))) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors())->with('error', 'Please check the highlighted fields.');
         }
 
         $opensAt = str_replace('T', ' ', (string) $this->request->getPost('opens_at')) . ':00';
         $closesAt = str_replace('T', ' ', (string) $this->request->getPost('closes_at')) . ':00';
-
         if ($closesAt <= $opensAt) {
             return redirect()->back()->withInput()->with('errors', ['closes_at' => 'Closing date and time must be later than opening date and time.'])->with('error', 'Please check the highlighted fields.');
         }
+        if (($this->request->getPost('status') ?? '') === 'Open' && $closesAt < date('Y-m-d H:i:s')) {
+            return redirect()->back()->withInput()->with('errors', ['closes_at' => 'An open call must end in the future.'])->with('error', 'Please check the highlighted fields.');
+        }
 
-        (new ApplicationRoundModel())->insert([
-            'round_number' => (int) $this->request->getPost('round_number'),
+        $data = [
+            'round_code' => trim((string) $this->request->getPost('round_code')),
             'title' => trim((string) $this->request->getPost('title')),
             'description' => trim((string) $this->request->getPost('description')),
             'opens_at' => $opensAt,
             'closes_at' => $closesAt,
             'status' => $this->request->getPost('status'),
-        ]);
+            'updated_by' => (int) session('user_id'),
+        ];
 
-        return redirect()->to(site_url('admin/application-rounds'))->with('success', 'Application round created successfully.');
+        if ($id === null) {
+            $data['created_by'] = (int) session('user_id');
+        }
+
+        $model = new ApplicationRoundModel();
+        $db = db_connect();
+
+        try {
+            $db->transStart();
+            if ($id === null) {
+                $model->insert($data, true);
+            } else {
+                $model->update($id, $data);
+            }
+            $db->transComplete();
+            if ($db->transStatus() === false) {
+                throw new \RuntimeException('Call transaction failed.');
+            }
+        } catch (\Throwable $e) {
+            $message = (int) $e->getCode() === 1062 || str_contains(strtolower($e->getMessage()), 'duplicate')
+                ? 'A call with this round code already exists.'
+                : 'Unable to save the call. Please try again.';
+            log_message('error', 'Call save failed: {message}', ['message' => $e->getMessage()]);
+            return redirect()->back()->withInput()->with('error', $message);
+        }
+
+        return redirect()->to(site_url('admin/calls'))->with('success', $id === null ? 'Call created successfully.' : 'Call updated successfully.');
     }
 
-    private function rules(): array
+    private function roundRules(?int $excludeId = null): array
+    {
+        $unique = 'is_unique[application_rounds.round_code,id,' . (int) $excludeId . ']';
+        return [
+            'round_code' => 'required|regex_match[/^\d{6}$/]|' . $unique,
+            'title' => 'required|min_length[3]|max_length[255]',
+            'description' => 'required|min_length[3]',
+            'opens_at' => 'required|valid_date[Y-m-d\TH:i]',
+            'closes_at' => 'required|valid_date[Y-m-d\TH:i]',
+            'status' => 'required|in_list[' . implode(',', self::ROUND_STATUSES) . ']',
+        ];
+    }
+
+    private function roundPayload(): array
+    {
+        return [
+            'round_code' => trim((string) $this->request->getPost('round_code')),
+            'title' => trim((string) $this->request->getPost('title')),
+            'description' => trim((string) $this->request->getPost('description')),
+            'opens_at' => str_replace('T', ' ', (string) $this->request->getPost('opens_at')) . ':00',
+            'closes_at' => str_replace('T', ' ', (string) $this->request->getPost('closes_at')) . ':00',
+            'status' => trim((string) $this->request->getPost('status')),
+        ];
+    }
+
+    private function roundsWithStats(): array
+    {
+        $rows = db_connect()->table('application_rounds ar')
+            ->select('ar.*, COUNT(ia.id) as applications_count')
+            ->join('internship_applications ia', 'ia.round_id = ar.id', 'left')
+            ->groupBy('ar.id')
+            ->orderBy('ar.opens_at', 'desc')
+            ->get()
+            ->getResultArray();
+
+        return array_map(fn (array $round) => $this->decorateRound($round), $rows);
+    }
+
+    private function decorateRound(array $round): array
+    {
+        $round['round_code'] = $round['round_code'] ?? (string) ($round['round_number'] ?? '');
+        $round['applications_count'] = (int) ($round['applications_count'] ?? 0);
+        $round['effective_status'] = $this->effectiveRoundStatus($round);
+        $round['can_open'] = $round['status'] !== 'Open';
+        $round['can_close'] = $round['status'] === 'Open';
+        return $round;
+    }
+
+    private function effectiveRoundStatus(array $round): string
+    {
+        $now = date('Y-m-d H:i:s');
+        if (($round['status'] ?? '') === 'Draft') {
+            return 'Draft';
+        }
+        if (($round['status'] ?? '') === 'Closed') {
+            return 'Closed';
+        }
+        if (($round['closes_at'] ?? '') < $now) {
+            return 'Expired';
+        }
+        if (($round['opens_at'] ?? '') > $now) {
+            return 'Upcoming';
+        }
+        return 'Accepting Applications';
+    }
+
+    private function applicationRules(): array
     {
         $rules = [
             'student_id' => 'required|trim|min_length[3]|max_length[50]',
@@ -242,7 +396,7 @@ class Internship extends BaseController
             'supervisor_phone' => 'required|regex_match[/^(?:01[3-9]\d{8}|\+8801[3-9]\d{8})$/]|max_length[20]',
             'placement_organization_name' => 'required|trim|max_length[190]',
             'organization_website_url' => 'permit_empty|valid_url_strict[http,https]|max_length[255]',
-            'mentor_name' => 'required|trim|max_length[150]',
+            'mentor_name' => 'required|max_length[150]',
             'mentor_email' => 'required|valid_email|max_length[190]',
         ];
 
@@ -255,7 +409,7 @@ class Internship extends BaseController
         return $rules;
     }
 
-    private function normalizedInput(): array
+    private function normalizedApplicationInput(): array
     {
         return [
             'student_id' => trim((string) $this->request->getPost('student_id')),
@@ -281,9 +435,9 @@ class Internship extends BaseController
         ];
     }
 
-    private function preserveInput(): array
+    private function preserveApplicationInput(): array
     {
-        return array_merge(['full_name' => $this->currentUser()['full_name'], 'gender_identity' => $this->currentUser()['gender_identity'] ?? ''], $this->normalizedInput());
+        return array_merge(['full_name' => $this->currentUser()['full_name'], 'gender_identity' => $this->currentUser()['gender_identity'] ?? ''], $this->normalizedApplicationInput());
     }
 
     private function departmentMatchesUniversity(int $universityId, int $departmentId): bool
@@ -300,7 +454,7 @@ class Internship extends BaseController
             ->where('status', 'Open')
             ->where('opens_at <=', date('Y-m-d H:i:s'))
             ->where('closes_at >=', date('Y-m-d H:i:s'))
-            ->orderBy('round_number', 'desc')
+            ->orderBy('round_code', 'desc')
             ->first();
     }
 
@@ -320,15 +474,19 @@ class Internship extends BaseController
     private function normalizeBangladeshiPhone(string $phone): string
     {
         $phone = preg_replace('/[\s\-\(\)]/', '', trim($phone)) ?? '';
+
         if (preg_match('/^(\+8801[3-9]\d{8})$/', $phone)) {
             return $phone;
         }
+
         if (preg_match('/^(01[3-9]\d{8})$/', $phone)) {
             return $phone;
         }
+
         if (preg_match('/^(8801[3-9]\d{8})$/', $phone)) {
             return '+' . $phone;
         }
+
         return $phone;
     }
 }

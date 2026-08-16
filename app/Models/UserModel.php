@@ -24,6 +24,8 @@ class UserModel extends Model
         'ethnic_minority_status',
         'ethnic_group_name',
         'status',
+        'role',
+        'is_active',
         'email_verified_at',
         'last_login_at',
     ];
