@@ -1,4 +1,4 @@
-<?php $currentPage = $page ?? 'dashboard'; ?>
+<?php $currentPage = $currentPage ?? ($page ?? 'dashboard'); ?>
 <aside class="sidebar" data-sidebar aria-hidden="true">
     <div class="sidebar__brand">
         <div class="logo-mark logo-mark--sm">IS</div>
@@ -6,6 +6,7 @@
             <div class="sidebar__title">ISSP Portal</div>
             <div class="sidebar__subtitle">Institutional workspace</div>
         </div>
+        <button class="ml-auto inline-grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/5 text-white lg:hidden" type="button" data-sidebar-close aria-label="Close navigation">✕</button>
     </div>
 
     <div class="sidebar__section">Workspace</div>

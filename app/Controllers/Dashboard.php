@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Models\ApplicationRoundModel;
+use App\Models\InternshipApplicationModel;
 use App\Models\UserModel;
 
 class Dashboard extends BaseController
@@ -29,7 +31,19 @@ class Dashboard extends BaseController
             'full_name' => 'required|trim|min_length[3]|max_length[150]',
             'phone' => 'required|regex_match[/^(?:01[3-9]\d{8}|\+8801[3-9]\d{8})$/]|max_length[20]',
             'gender_identity' => 'required|in_list[Woman,Man,Gender Diverse Individuals]',
+            'date_of_birth' => 'required|valid_date[Y-m-d]',
+            'disability_status' => 'required|in_list[Yes,No]',
+            'disability_type' => 'permit_empty|max_length[255]',
+            'ethnic_minority_status' => 'required|in_list[Yes,No]',
+            'ethnic_group_name' => 'permit_empty|max_length[255]',
         ];
+
+        if (($this->request->getPost('disability_status') ?? '') === 'Yes') {
+            $rules['disability_type'] = 'required|max_length[255]';
+        }
+        if (($this->request->getPost('ethnic_minority_status') ?? '') === 'Yes') {
+            $rules['ethnic_group_name'] = 'required|max_length[255]';
+        }
 
         if (! $this->validate($rules)) {
             return redirect()->to(site_url('profile'))
@@ -37,21 +51,49 @@ class Dashboard extends BaseController
                     'full_name' => $this->request->getPost('full_name'),
                     'phone' => $this->request->getPost('phone'),
                     'gender_identity' => $this->request->getPost('gender_identity'),
+                    'date_of_birth' => $this->request->getPost('date_of_birth'),
+                    'disability_status' => $this->request->getPost('disability_status'),
+                    'disability_type' => $this->request->getPost('disability_type'),
+                    'ethnic_minority_status' => $this->request->getPost('ethnic_minority_status'),
+                    'ethnic_group_name' => $this->request->getPost('ethnic_group_name'),
                 ])
                 ->with('errors', $this->validator->getErrors())
                 ->with('error', 'Please check the highlighted fields.');
+        }
+
+        $disabilityStatus = trim((string) $this->request->getPost('disability_status'));
+        $ethnicMinorityStatus = trim((string) $this->request->getPost('ethnic_minority_status'));
+        $disabilityType = trim((string) $this->request->getPost('disability_type'));
+        $ethnicGroupName = trim((string) $this->request->getPost('ethnic_group_name'));
+        if ($disabilityStatus !== 'Yes') {
+            $disabilityType = '';
+        }
+        if ($ethnicMinorityStatus !== 'Yes') {
+            $ethnicGroupName = '';
         }
 
         $input = [
             'full_name' => trim((string) $this->request->getPost('full_name')),
             'phone' => $this->normalizeBangladeshiPhone((string) $this->request->getPost('phone')),
             'gender_identity' => trim((string) $this->request->getPost('gender_identity')),
+            'date_of_birth' => trim((string) $this->request->getPost('date_of_birth')),
+            'disability_status' => $disabilityStatus,
+            'disability_type' => $disabilityType,
+            'ethnic_minority_status' => $ethnicMinorityStatus,
+            'ethnic_group_name' => $ethnicGroupName,
         ];
 
         if ($input['phone'] === '' || ! preg_match('/^(?:01[3-9]\d{8}|\+8801[3-9]\d{8})$/', $input['phone'])) {
             return redirect()->to(site_url('profile'))
                 ->withInput($input)
                 ->with('errors', ['phone' => 'Please enter a valid Bangladeshi mobile number.'])
+                ->with('error', 'Please check the highlighted fields.');
+        }
+
+        if ($input['disability_status'] === 'Yes' && $input['disability_type'] === '') {
+            return redirect()->to(site_url('profile'))
+                ->withInput($input)
+                ->with('errors', ['disability_type' => 'Please specify the type of disability.'])
                 ->with('error', 'Please check the highlighted fields.');
         }
 
@@ -76,6 +118,11 @@ class Dashboard extends BaseController
                 'full_name' => $input['full_name'],
                 'phone' => $input['phone'],
                 'gender_identity' => $input['gender_identity'],
+            'date_of_birth' => $input['date_of_birth'],
+            'disability_status' => $input['disability_status'],
+            'disability_type' => $input['disability_type'] !== '' ? $input['disability_type'] : null,
+            'ethnic_minority_status' => $input['ethnic_minority_status'],
+            'ethnic_group_name' => $input['ethnic_group_name'] !== '' ? $input['ethnic_group_name'] : null,
             ]);
             $db->transComplete();
 
@@ -168,6 +215,38 @@ class Dashboard extends BaseController
             'is_logged_in' => (bool) session('is_logged_in'),
         ];
 
+        $now = date('Y-m-d H:i:s');
+        $db = db_connect();
+        $openCalls = [];
+        $applicationHistory = [];
+
+        try {
+            if ($db->tableExists('application_rounds') && $db->tableExists('internship_applications')) {
+                $openCalls = $db->table('application_rounds ar')
+                    ->select('ar.id, ar.round_code, ar.title, ar.description, ar.opens_at, ar.closes_at, COUNT(ia.id) as applications_count')
+                    ->join('internship_applications ia', 'ia.round_id = ar.id', 'left')
+                    ->where('ar.status', 'Open')
+                    ->where('ar.opens_at <=', $now)
+                    ->where('ar.closes_at >=', $now)
+                    ->where('NOT EXISTS (SELECT 1 FROM internship_applications ia2 WHERE ia2.round_id = ar.id AND ia2.user_id = ' . (int) $user['user_id'] . ')', null, false)
+                    ->groupBy('ar.id')
+                    ->orderBy('ar.closes_at', 'asc')
+                    ->get()
+                    ->getResultArray();
+
+                $applicationHistory = $db->table('internship_applications ia')
+                    ->select('ia.id, ia.status, ia.submitted_at, ar.round_code, ar.title as round_title')
+                    ->join('application_rounds ar', 'ar.id = ia.round_id', 'left')
+                    ->where('ia.user_id', $user['user_id'])
+                    ->orderBy('ia.submitted_at', 'desc')
+                    ->get()
+                    ->getResultArray();
+            }
+        } catch (\Throwable $e) {
+            $openCalls = [];
+            $applicationHistory = [];
+        }
+
         return [
             'page' => $page,
             'user' => $user,
@@ -185,6 +264,12 @@ class Dashboard extends BaseController
                 ['label' => 'Account verification', 'done' => false],
             ],
             'applications' => [],
+            'openCalls' => array_map(function (array $round) use ($now) {
+                $round['remaining_label'] = $this->deadlineLabel($round['closes_at'], $now);
+                $round['effective_status'] = $now < $round['opens_at'] ? 'Upcoming' : 'Accepting Applications';
+                return $round;
+            }, $openCalls),
+            'applicationHistory' => $applicationHistory,
             'announcements' => [
                 'Application guidelines are now available',
                 'Check the required documents before applying',
@@ -228,5 +313,26 @@ class Dashboard extends BaseController
         }
 
         return $phone;
+    }
+
+    private function deadlineLabel(string $closesAt, string $now): string
+    {
+        $remaining = strtotime($closesAt) - strtotime($now);
+        if ($remaining <= 0) {
+            return 'Deadline passed';
+        }
+
+        $days = (int) floor($remaining / 86400);
+        if ($days >= 1) {
+            return $days === 1 ? '1 day remaining' : $days . ' days remaining';
+        }
+
+        $hours = (int) floor($remaining / 3600);
+        if ($hours >= 1) {
+            return $hours === 1 ? '1 hour remaining' : $hours . ' hours remaining';
+        }
+
+        $minutes = max(1, (int) floor($remaining / 60));
+        return $minutes === 1 ? '1 minute remaining' : $minutes . ' minutes remaining';
     }
 }

@@ -17,9 +17,14 @@ $routes->get('profile', 'Dashboard::profile', ['filter' => 'auth', 'as' => 'prof
 $routes->post('profile', 'Dashboard::updateProfile', ['filter' => 'auth', 'as' => 'profile.update']);
 $routes->post('profile/password', 'Dashboard::updatePassword', ['filter' => 'auth', 'as' => 'profile.password']);
 $routes->get('apply', 'Internship::apply', ['filter' => 'auth', 'as' => 'apply']);
+$routes->get('apply/(:segment)', 'Internship::apply/$1', ['filter' => 'auth', 'as' => 'apply.round']);
+$routes->get('apply/departments/(:num)', 'Internship::departments/$1', ['filter' => 'auth', 'as' => 'apply.departments']);
 $routes->post('apply', 'Internship::submit', ['filter' => 'auth', 'as' => 'apply.submit']);
+$routes->post('apply/(:segment)', 'Internship::submit/$1', ['filter' => 'auth', 'as' => 'apply.round.submit']);
 $routes->get('applications', 'Internship::index', ['filter' => 'auth', 'as' => 'applications']);
-$routes->get('applications/(:num)', 'Internship::show/$1', ['filter' => 'auth', 'as' => 'applications.show']);
+$routes->get('applications/(:segment)', 'Internship::show/$1', ['filter' => 'auth', 'as' => 'applications.show']);
+$routes->get('applications/(:num)', 'Internship::show/$1', ['filter' => 'auth']);
+$routes->get('applications/(:segment)/edit', 'Internship::edit/$1', ['filter' => 'auth', 'as' => 'applications.edit']);
 $routes->get('admin/calls', 'Internship::rounds', ['filter' => 'admin', 'as' => 'applicationRounds']);
 $routes->get('admin/calls/create', 'Internship::createRound', ['filter' => 'admin', 'as' => 'applicationRounds.create']);
 $routes->get('admin/calls/(:num)/edit', 'Internship::editRound/$1', ['filter' => 'admin', 'as' => 'applicationRounds.edit']);

@@ -48,8 +48,8 @@
                         <div>
                             <label class="mb-2 block text-sm font-medium" for="password">Password <span class="text-rose-600">*</span></label>
                             <div class="relative">
-                                <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-20 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-invalid="<?= isset($errors['password']) ? 'true' : 'false' ?>">
-                                <button type="button" class="absolute right-2 top-2 grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-brand-100" data-toggle-password="password" aria-label="Show password" aria-pressed="false">
+                                <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-14 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-invalid="<?= isset($errors['password']) ? 'true' : 'false' ?>">
+                                <button type="button" class="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-brand-100" data-toggle-password="password" aria-label="Show password" aria-pressed="false">
                                     <span class="sr-only">Toggle password visibility</span>
                                     <svg data-icon="eye" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />

@@ -13,64 +13,138 @@ class Internship extends BaseController
     private const GENDER_IDENTITIES = ['Woman', 'Man', 'Gender Diverse Individuals'];
     private const INTERNSHIP_TYPES = ['Industry', 'Capstone'];
     private const ROUND_STATUSES = ['Draft', 'Open', 'Closed'];
+    private const MIN_CGPA = 2.75;
+    private const MIN_CREDIT_COMPLETION = 75.00;
+    private const DEPARTMENTS = [
+        'Computer Science and Engineering (CSE)',
+        'Computer Science (CS)',
+        'Computer Engineering (CE)',
+        'Information Technology (IT)',
+        'Information and Communication Technology (ICT)',
+        'Software Engineering (SWE)',
+        'Software Engineering and Information Systems',
+        'Data Science (DS)',
+        'Cyber Security',
+        'Cyber Security Engineering',
+        'Robotics and Mechatronics Engineering',
+        'Other',
+    ];
 
-    public function apply(): string
+    public function apply(string $roundCode = null): string
     {
         $user = $this->currentUser();
-        $round = $this->openRound();
-        $application = null;
+        $eligibleRounds = $this->eligibleRoundsForUser($user['id']);
 
-        if ($round) {
-            $application = (new InternshipApplicationModel())
-                ->where('round_id', $round['id'])
-                ->where('user_id', $user['id'])
-                ->first();
+        if ($roundCode !== null) {
+            $round = $this->eligibleRoundByCode($roundCode);
+            if (! $round) {
+                return redirect()->to(site_url('dashboard'))->with('error', 'That application call is no longer available.');
+            }
+
+            $application = $this->userApplicationForRound($user['id'], (int) $round['id']);
+            if ($application) {
+                return redirect()->to(site_url('applications/' . $application['application_code']))
+                    ->with('info', 'You have already submitted an application for this round.');
+            }
+        } else {
+            $round = $this->openRound();
         }
+
+        $application = $round ? $this->userApplicationForRound($user['id'], (int) $round['id']) : null;
 
         return view('internship/apply', [
             'title' => 'Apply',
             'openRound' => $round,
             'application' => $application,
+            'eligibleRounds' => $eligibleRounds,
             'user' => $user,
-            'universities' => (new UniversityModel())->orderBy('name', 'asc')->findAll(),
-            'departments' => (new DepartmentModel())->orderBy('name', 'asc')->findAll(),
+            'universities' => (new UniversityModel())
+                ->where('is_active', 1)
+                ->orderBy('type', 'asc')
+                ->orderBy('name', 'asc')
+                ->findAll(),
             'errors' => session('errors') ?? [],
         ]);
     }
 
-    public function submit()
+    public function departments(int $universityId)
+    {
+        try {
+            $departments = (new DepartmentModel())
+                ->where('university_id', $universityId)
+                ->join('universities', 'universities.id = departments.university_id')
+                ->where('universities.is_active', 1)
+                ->orderBy('name', 'asc')
+                ->findAll();
+
+            return $this->response->setJSON([
+                'success' => true,
+                'departments' => $departments,
+            ]);
+        } catch (\Throwable) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'departments' => [],
+            ]);
+        }
+    }
+
+    public function submit(string $roundCode = null)
     {
         $user = $this->currentUser();
-        $round = $this->openRound();
+        $round = $this->eligibleRoundByCode($roundCode);
+        $returnToApply = $roundCode !== null && $roundCode !== '' ? site_url('apply/' . $roundCode) : rtrim(site_url('apply'), '/') . '/';
 
         if (! $round) {
-            return redirect()->to(site_url('apply'))->with('error', 'There is currently no open call for applications.');
+            return redirect()->to(site_url('dashboard'))->with('error', 'That application call is no longer available.');
         }
 
         if (! $this->validate($this->applicationRules())) {
-            return redirect()->to(site_url('apply'))
+            return redirect()->to($returnToApply)->setHeader('Location', $returnToApply)
                 ->withInput($this->preserveApplicationInput())
                 ->with('errors', $this->validator->getErrors())
                 ->with('error', 'Please check the highlighted fields.');
         }
 
         $input = $this->normalizedApplicationInput();
+        if (! $this->universityExistsAndActive((int) $input['university_id'])) {
+            return redirect()->to($returnToApply)->setHeader('Location', $returnToApply)
+                ->withInput($this->preserveApplicationInput())
+                ->with('errors', ['university_id' => 'Please choose a valid university.'])
+                ->with('error', 'Please check the highlighted fields.');
+        }
         if ($input['internship_type'] !== 'Capstone') {
             $input['team_member_count'] = null;
         }
 
         if ($input['internship_end_date'] <= $input['internship_start_date']) {
-            return redirect()->to(site_url('apply'))
+            return redirect()->to($returnToApply)->setHeader('Location', $returnToApply)
                 ->withInput($this->preserveApplicationInput())
                 ->with('errors', ['internship_end_date' => 'The internship end date must be later than the start date.'])
                 ->with('error', 'Please check the highlighted fields.');
         }
 
-        if (! $this->departmentMatchesUniversity((int) $input['university_id'], (int) $input['department_id'])) {
-            return redirect()->to(site_url('apply'))
+        $eligibility = $this->academicEligibility((string) $input['current_cgpa'], (string) $input['total_credits'], (string) $input['earned_credits']);
+        if ($eligibility['state'] !== 'eligible') {
+            $errors = [];
+            if ($eligibility['state'] === 'invalid_credits') {
+                $errors['current_cgpa'] = $eligibility['message'];
+                $errors['total_credits'] = $eligibility['message'];
+                $errors['earned_credits'] = $eligibility['message'];
+            } else {
+                if ($eligibility['cgpa_failed']) {
+                    $errors['current_cgpa'] = 'You are not eligible to apply because a minimum CGPA of 2.75 is required.';
+                }
+                if ($eligibility['credit_failed']) {
+                    $errors['total_credits'] = 'You are not eligible to apply because you must complete at least 75% of your total program credits.';
+                    $errors['earned_credits'] = 'You are not eligible to apply because you must complete at least 75% of your total program credits.';
+                }
+            }
+
+            return redirect()->to($returnToApply)->setHeader('Location', $returnToApply)
                 ->withInput($this->preserveApplicationInput())
-                ->with('errors', ['department_id' => 'Please choose a department that belongs to the selected university.'])
-                ->with('error', 'Please check the highlighted fields.');
+                ->with('errors', $errors)
+                ->with('error', $eligibility['message']);
         }
 
         $applicationModel = new InternshipApplicationModel();
@@ -82,7 +156,7 @@ class Internship extends BaseController
             $existing = $applicationModel->where('round_id', $round['id'])->where('user_id', $user['id'])->first();
             if ($existing) {
                 $db->transRollback();
-                return redirect()->to(site_url('applications/' . $existing['id']))->with('info', 'You already submitted an application for this round.');
+                return redirect()->to(site_url('applications/' . $existing['application_code']))->with('info', 'You already submitted an application for this round.');
             }
 
             $data = [
@@ -92,10 +166,15 @@ class Internship extends BaseController
                 'gender_identity' => $user['gender_identity'] ?? '',
                 'student_id' => trim((string) $input['student_id']),
                 'university_id' => (int) $input['university_id'],
-                'department_id' => (int) $input['department_id'],
+                'department_id' => null,
+                'department' => $input['department'],
+                'other_department' => $input['department'] === 'Other' ? trim((string) $input['other_department']) : null,
                 'current_cgpa' => $input['current_cgpa'],
                 'total_credits' => $input['total_credits'],
                 'earned_credits' => $input['earned_credits'],
+                'credit_completion_percentage' => $eligibility['credit_completion_percentage'],
+                'information_declaration' => 1,
+                'declared_at' => date('Y-m-d H:i:s'),
                 'internship_type' => $input['internship_type'],
                 'team_member_count' => $input['team_member_count'],
                 'supervisor_name' => trim((string) $input['supervisor_name']),
@@ -114,7 +193,12 @@ class Internship extends BaseController
                 'submitted_at' => date('Y-m-d H:i:s'),
             ];
 
-            $applicationModel->insert($data, true);
+            $inserted = $applicationModel->insert($data, true);
+            if ($inserted === false) {
+                $modelErrors = $applicationModel->errors();
+                $dbError = $applicationModel->db->error();
+                throw new \RuntimeException('Application insert failed: ' . json_encode(['modelErrors' => $modelErrors, 'dbError' => $dbError], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            }
             $db->transComplete();
 
             if ($db->transStatus() === false) {
@@ -126,7 +210,7 @@ class Internship extends BaseController
                 $message = 'You have already applied for this round.';
             }
             log_message('error', 'Internship submit failed: {message}', ['message' => $e->getMessage()]);
-            return redirect()->to(site_url('apply'))->withInput($this->preserveApplicationInput())->with('error', $message);
+            return redirect()->to($returnToApply)->setHeader('Location', $returnToApply)->withInput($this->preserveApplicationInput())->with('error', $message);
         }
 
         return redirect()->to(site_url('applications'))->with('success', 'Your application has been submitted successfully.');
@@ -139,6 +223,7 @@ class Internship extends BaseController
             ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title')
             ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
             ->where('internship_applications.user_id', $user['id'])
+            ->where('internship_applications.deleted_at', null)
             ->orderBy('application_rounds.round_code', 'desc')
             ->findAll();
 
@@ -150,13 +235,21 @@ class Internship extends BaseController
         ]);
     }
 
-    public function show(int $id): string|\CodeIgniter\HTTP\ResponseInterface
+    public function show(string $applicationCode): string|\CodeIgniter\HTTP\ResponseInterface
     {
         $user = $this->currentUser();
+        if (ctype_digit($applicationCode)) {
+            $legacy = (new InternshipApplicationModel())->find((int) $applicationCode);
+            if ($legacy && (int) $legacy['user_id'] === $user['id']) {
+                return redirect()->to(site_url('applications/' . $legacy['application_code']), 301);
+            }
+        }
         $application = (new InternshipApplicationModel())
-            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title')
+            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title, users.gender_identity as profile_gender_identity, users.disability_status, users.disability_type, users.ethnic_minority_status, users.ethnic_group_name')
             ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
-            ->where('internship_applications.id', $id)
+            ->join('users', 'users.id = internship_applications.user_id')
+            ->where('internship_applications.application_code', $applicationCode)
+            ->where('internship_applications.deleted_at', null)
             ->first();
 
         if (! $application) {
@@ -172,6 +265,27 @@ class Internship extends BaseController
             'user' => $user,
             'application' => $application,
         ]);
+    }
+
+    public function edit(string $applicationCode): string|\CodeIgniter\HTTP\ResponseInterface
+    {
+        $user = $this->currentUser();
+        $application = (new InternshipApplicationModel())
+            ->select('internship_applications.*, application_rounds.round_code, application_rounds.title as round_title')
+            ->join('application_rounds', 'application_rounds.id = internship_applications.round_id')
+            ->where('internship_applications.application_code', $applicationCode)
+            ->where('internship_applications.deleted_at', null)
+            ->first();
+
+        if (! $application || (int) $application['user_id'] !== $user['id']) {
+            return $this->response->setStatusCode(404)->setBody(view('errors/html/error_404'));
+        }
+
+        if ((int) ($application['edit_enabled'] ?? 0) !== 1) {
+            return redirect()->to(site_url('applications/' . $application['application_code']))->with('error', 'Editing is currently locked. Please contact the administrator if a correction is required.');
+        }
+
+        return $this->show($applicationCode);
     }
 
     public function rounds(): string
@@ -381,13 +495,15 @@ class Internship extends BaseController
         $rules = [
             'student_id' => 'required|trim|min_length[3]|max_length[50]',
             'university_id' => 'required|is_natural_no_zero',
-            'department_id' => 'required|is_natural_no_zero',
+            'department' => 'required|in_list[' . implode(',', self::DEPARTMENTS) . ']',
+            'other_department' => 'permit_empty|trim|max_length[150]',
             'current_cgpa' => 'required|decimal|greater_than_equal_to[0]|less_than_equal_to[4]',
-            'total_credits' => 'required|decimal|greater_than_equal_to[0]',
+            'total_credits' => 'required|decimal|greater_than[0]',
             'earned_credits' => 'required|decimal|greater_than_equal_to[0]',
             'internship_type' => 'required|in_list[' . implode(',', self::INTERNSHIP_TYPES) . ']',
             'internship_start_date' => 'required|valid_date[Y-m-d]',
             'internship_end_date' => 'required|valid_date[Y-m-d]',
+            'information_declaration' => 'required|in_list[1]',
             'supervisor_name' => 'required|trim|min_length[3]|max_length[150]',
             'supervisor_email' => 'required|valid_email|max_length[190]',
             'supervisor_university' => 'required|trim|max_length[190]',
@@ -406,6 +522,10 @@ class Internship extends BaseController
             $rules['team_member_count'] = 'permit_empty|is_natural_no_zero';
         }
 
+        if (($this->request->getPost('department') ?? '') === 'Other') {
+            $rules['other_department'] = 'required|trim|min_length[3]|max_length[150]';
+        }
+
         return $rules;
     }
 
@@ -414,10 +534,12 @@ class Internship extends BaseController
         return [
             'student_id' => trim((string) $this->request->getPost('student_id')),
             'university_id' => (int) $this->request->getPost('university_id'),
-            'department_id' => (int) $this->request->getPost('department_id'),
+            'department' => trim((string) $this->request->getPost('department')),
+            'other_department' => trim((string) $this->request->getPost('other_department')),
             'current_cgpa' => number_format((float) $this->request->getPost('current_cgpa'), 2, '.', ''),
             'total_credits' => number_format((float) $this->request->getPost('total_credits'), 2, '.', ''),
             'earned_credits' => number_format((float) $this->request->getPost('earned_credits'), 2, '.', ''),
+            'information_declaration' => $this->request->getPost('information_declaration') === '1' ? '1' : '',
             'internship_type' => trim((string) $this->request->getPost('internship_type')),
             'team_member_count' => $this->request->getPost('team_member_count') !== null && $this->request->getPost('team_member_count') !== '' ? (int) $this->request->getPost('team_member_count') : null,
             'internship_start_date' => (string) $this->request->getPost('internship_start_date'),
@@ -440,22 +562,145 @@ class Internship extends BaseController
         return array_merge(['full_name' => $this->currentUser()['full_name'], 'gender_identity' => $this->currentUser()['gender_identity'] ?? ''], $this->normalizedApplicationInput());
     }
 
-    private function departmentMatchesUniversity(int $universityId, int $departmentId): bool
+    private function universityExistsAndActive(int $universityId): bool
     {
-        return (new DepartmentModel())
-            ->where('id', $departmentId)
-            ->where('university_id', $universityId)
+        return (new UniversityModel())
+            ->where('id', $universityId)
+            ->where('is_active', 1)
             ->first() !== null;
+    }
+
+    private function academicEligibility(string $cgpa, string $totalCredits, string $earnedCredits): array
+    {
+        if ($cgpa === '' || $totalCredits === '' || $earnedCredits === '') {
+            return [
+                'state' => 'pending',
+                'message' => '',
+                'cgpa_failed' => false,
+                'credit_failed' => false,
+                'credit_completion_percentage' => '0.00',
+            ];
+        }
+
+        if (! is_numeric($cgpa) || ! is_numeric($totalCredits) || ! is_numeric($earnedCredits)) {
+            return [
+                'state' => 'invalid_credits',
+                'message' => 'Please enter valid credit information. Earned credits cannot exceed total credits, and total credits must be greater than zero.',
+                'cgpa_failed' => false,
+                'credit_failed' => false,
+                'credit_completion_percentage' => '0.00',
+            ];
+        }
+
+        $cgpaValue = (float) $cgpa;
+        $total = (float) $totalCredits;
+        $earned = (float) $earnedCredits;
+
+        if ($total <= 0 || $earned < 0 || $earned > $total) {
+            return [
+                'state' => 'invalid_credits',
+                'message' => 'Please enter valid credit information. Earned credits cannot exceed total credits, and total credits must be greater than zero.',
+                'cgpa_failed' => false,
+                'credit_failed' => false,
+                'credit_completion_percentage' => '0.00',
+            ];
+        }
+
+        $creditCompletion = ($earned * 100) / $total;
+        $cgpaFailed = $cgpaValue < self::MIN_CGPA;
+        $creditFailed = ($earned * 100) < ($total * self::MIN_CREDIT_COMPLETION);
+
+        if ($cgpaFailed || $creditFailed) {
+            return [
+                'state' => 'ineligible',
+                'message' => $cgpaFailed && $creditFailed
+                    ? 'You are not eligible to apply. A minimum CGPA of 2.75 and completion of at least 75% of total program credits are required.'
+                    : ($cgpaFailed
+                        ? 'You are not eligible to apply because a minimum CGPA of 2.75 is required.'
+                        : 'You are not eligible to apply because you must complete at least 75% of your total program credits.'),
+                'cgpa_failed' => $cgpaFailed,
+                'credit_failed' => $creditFailed,
+                'credit_completion_percentage' => number_format($creditCompletion, 2, '.', ''),
+            ];
+        }
+
+        return [
+            'state' => 'eligible',
+            'message' => 'You meet the academic eligibility requirements for this application.',
+            'cgpa_failed' => false,
+            'credit_failed' => false,
+            'credit_completion_percentage' => number_format($creditCompletion, 2, '.', ''),
+        ];
     }
 
     private function openRound(): ?array
     {
-        return (new ApplicationRoundModel())
-            ->where('status', 'Open')
-            ->where('opens_at <=', date('Y-m-d H:i:s'))
-            ->where('closes_at >=', date('Y-m-d H:i:s'))
-            ->orderBy('round_code', 'desc')
-            ->first();
+        try {
+            return (new ApplicationRoundModel())
+                ->where('status', 'Open')
+                ->where('opens_at <=', date('Y-m-d H:i:s'))
+                ->where('closes_at >=', date('Y-m-d H:i:s'))
+                ->orderBy('round_code', 'desc')
+                ->first();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function eligibleRoundByCode(?string $roundCode): ?array
+    {
+        if ($roundCode === null || $roundCode === '') {
+            return $this->openRound();
+        }
+
+        try {
+            return (new ApplicationRoundModel())
+                ->where('round_code', $roundCode)
+                ->where('status', 'Open')
+                ->where('opens_at <=', date('Y-m-d H:i:s'))
+                ->where('closes_at >=', date('Y-m-d H:i:s'))
+                ->first();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function eligibleRoundsForUser(int $userId): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('application_rounds') || ! $db->tableExists('internship_applications')) {
+            return [];
+        }
+
+        try {
+            return $db->table('application_rounds ar')
+                ->select('ar.id, ar.round_code, ar.title, ar.description, ar.opens_at, ar.closes_at')
+                ->where('ar.status', 'Open')
+                ->where('ar.opens_at <=', date('Y-m-d H:i:s'))
+                ->where('ar.closes_at >=', date('Y-m-d H:i:s'))
+                ->where('NOT EXISTS (SELECT 1 FROM internship_applications ia WHERE ia.round_id = ar.id AND ia.user_id = ' . (int) $userId . ')', null, false)
+                ->orderBy('ar.closes_at', 'asc')
+                ->get()
+                ->getResultArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function userApplicationForRound(int $userId, int $roundId): ?array
+    {
+        if (! db_connect()->tableExists('internship_applications')) {
+            return null;
+        }
+
+        try {
+            return (new InternshipApplicationModel())
+                ->where('user_id', $userId)
+                ->where('round_id', $roundId)
+                ->first();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function currentUser(): array

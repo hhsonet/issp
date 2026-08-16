@@ -138,7 +138,7 @@ $actionUrl = $mode === 'edit' && $round ? site_url('admin/calls/' . $round['id']
                                     <td class="border-b border-slate-100 px-3 py-4">
                                         <div class="flex flex-wrap gap-2">
                                             <a class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50" href="<?= site_url('admin/calls/' . $item['id'] . '/edit') ?>">Edit</a>
-                                            <a class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50" href="<?= site_url('applications/' . ($item['id'] ?? 0)) ?>" aria-disabled="true">View</a>
+                                            <a class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50" href="<?= site_url('applications/' . ($item['application_code'] ?? '')) ?>" aria-disabled="true">View</a>
                                             <?php if ($item['can_open']): ?>
                                                 <form method="post" action="<?= site_url('admin/calls/' . $item['id'] . '/status') ?>" class="inline">
                                                     <?= csrf_field() ?>
