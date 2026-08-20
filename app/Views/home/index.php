@@ -106,6 +106,81 @@
         </div>
     </section>
 
+    <section class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="overflow-hidden rounded-[2rem] border border-amber-200 bg-amber-50 shadow-soft">
+            <div class="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+                <div class="p-6 sm:p-8 lg:p-10">
+                    <div class="inline-flex items-center rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-800">
+                        Under maintenance
+                    </div>
+                    <h2 class="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                        We’re making the ISSP portal even better.
+                    </h2>
+                    <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                        Some sections of the site may be temporarily updated while we improve stability, performance, and the overall user experience. Public pages remain available unless otherwise stated.
+                    </p>
+
+                    <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                        <?php foreach ([
+                            ['label' => 'Status', 'value' => 'Limited access'],
+                            ['label' => 'Support', 'value' => 'Available'],
+                            ['label' => 'Updates', 'value' => 'In progress'],
+                        ] as $item): ?>
+                            <div class="rounded-3xl border border-amber-200 bg-white p-4">
+                                <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"><?= esc($item['label']) ?></div>
+                                <div class="mt-2 text-base font-semibold text-slate-950"><?= esc($item['value']) ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <a class="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" href="<?= site_url('login') ?>">
+                            Sign In
+                        </a>
+                        <a class="inline-flex items-center rounded-full border border-amber-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-amber-100" href="<?= site_url('signup') ?>">
+                            Create Account
+                        </a>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-center bg-gradient-to-br from-amber-100 via-amber-50 to-white p-6 sm:p-8 lg:p-10">
+                    <div class="w-full max-w-md rounded-[2rem] border border-amber-200 bg-white p-6 shadow-soft">
+                        <div class="flex items-center gap-3">
+                            <span class="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-800">
+                                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M12 2v4" />
+                                    <path d="M12 18v4" />
+                                    <path d="M4.93 4.93l2.83 2.83" />
+                                    <path d="M16.24 16.24l2.83 2.83" />
+                                    <path d="M2 12h4" />
+                                    <path d="M18 12h4" />
+                                    <path d="M4.93 19.07l2.83-2.83" />
+                                    <path d="M16.24 7.76l2.83-2.83" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
+                            </span>
+                            <div>
+                                <p class="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Maintenance mode</p>
+                                <h3 class="mt-1 text-xl font-semibold text-slate-950">Brief service window</h3>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 space-y-4">
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div class="text-sm font-semibold text-slate-950">What this means</div>
+                                <p class="mt-1 text-sm leading-6 text-slate-600">Some pages may be temporarily unavailable while updates are applied.</p>
+                            </div>
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div class="text-sm font-semibold text-slate-950">What you can do</div>
+                                <p class="mt-1 text-sm leading-6 text-slate-600">You can still sign in, create an account, and return once maintenance is complete.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="features" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="max-w-2xl">
             <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Features</p>
@@ -220,7 +295,6 @@
                 <div class="mt-3 grid gap-2">
                     <span>support@issp.gov.bd</span>
                     <span>+880 2 0000 0000</span>
-                    <a class="transition hover:text-slate-950" href="https://github.com/hhsonet" target="_blank" rel="noopener noreferrer">GitHub: hhsonet</a>
                     <span>&copy; <?= date('Y') ?> ISSP</span>
                 </div>
             </div>
