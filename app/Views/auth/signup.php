@@ -19,7 +19,7 @@
             </nav>
 
             <div class="flex items-center gap-2">
-                <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="<?= site_url('login') ?>">Sign In</a>
+                <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="<?= site_url('/') . '#login' ?>">Sign In</a>
                 <a class="inline-flex items-center rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700" href="<?= site_url('signup') ?>">Create Account</a>
             </div>
         </div>
@@ -164,7 +164,7 @@
 
                     <div class="grid gap-4 pt-2">
                         <button class="w-full rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60" type="submit">Create Account</button>
-                        <p class="text-center text-sm text-slate-500">Already have an account? <a href="<?= site_url('login') ?>" class="font-semibold text-brand-700 hover:text-brand-600">Log in</a></p>
+                        <p class="text-center text-sm text-slate-500">Already have an account? <a href="<?= site_url('/') . '#login' ?>" class="font-semibold text-brand-700 hover:text-brand-600">Log in</a></p>
                     </div>
                 <?= form_close() ?>
             </div>

@@ -6,7 +6,6 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index', ['as' => 'home']);
 $routes->get('health', 'Home::health', ['as' => 'health']);
 $routes->post('contact', 'Home::contact', ['as' => 'contact']);
-$routes->get('login', 'Auth::login', ['filter' => 'guest', 'as' => 'login']);
 $routes->post('login', 'Auth::attemptLogin', ['filter' => 'guest', 'as' => 'login.attempt']);
 $routes->get('signup', 'Auth::signup', ['as' => 'signup']);
 $routes->post('signup', 'Auth::attemptSignup', ['as' => 'signup.attempt']);

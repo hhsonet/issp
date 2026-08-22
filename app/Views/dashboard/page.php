@@ -5,7 +5,7 @@
     'baseUrl' => base_url(),
     'homeUrl' => site_url('/'),
     'dashboardUrl' => site_url('dashboard'),
-    'loginUrl' => site_url('login'),
+    'loginUrl' => site_url('/') . '#login',
     'signupUrl' => site_url('signup'),
     'profileUrl' => site_url('profile'),
     'applicationsUrl' => site_url('applications'),

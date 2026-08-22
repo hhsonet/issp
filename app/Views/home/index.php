@@ -14,14 +14,15 @@
             </a>
 
             <nav class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex" aria-label="Primary">
-                <a class="transition hover:text-slate-950" href="#features">Features</a>
-                <a class="transition hover:text-slate-950" href="#process">How it works</a>
+                <a class="transition hover:text-slate-950" href="#overview">Overview</a>
+                <a class="transition hover:text-slate-950" href="#tracks">Tracks</a>
+                <a class="transition hover:text-slate-950" href="#eligibility">Eligibility</a>
                 <a class="transition hover:text-slate-950" href="#downloads">Downloads</a>
                 <a class="transition hover:text-slate-950" href="#support">Support</a>
             </nav>
 
             <div class="flex items-center gap-2">
-                <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="<?= site_url('login') ?>">Sign In</a>
+                <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="<?= site_url('/') . '#login' ?>">Sign In</a>
                 <a class="inline-flex items-center rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700" href="<?= site_url('signup') ?>">Create Account</a>
             </div>
         </div>
@@ -32,26 +33,26 @@
         <div class="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-20">
             <div class="max-w-3xl">
                 <div class="inline-flex items-center rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-                    Secure application portal
+                    ICSETEP Domestic Internship
                 </div>
                 <h1 class="mt-5 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-                    A modern, simple portal for ISSP applicants.
+                    Apply for the ICSETEP domestic internship program.
                 </h1>
                 <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                    Create an account, complete your profile, and manage applications in a clean interface built with native CI4 views, Tailwind CSS, and vanilla JavaScript.
+                    Funded by the Asian Development Bank, implemented through the University Grants Commission of Bangladesh, and managed by the Project Management Unit, this portal supports CSE and IT students applying for domestic internship opportunities nationwide.
                 </p>
 
                 <div class="mt-8 flex flex-wrap gap-3">
                     <a class="inline-flex items-center rounded-full bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-700" href="<?= site_url('signup') ?>">Create Account</a>
-                    <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="<?= site_url('login') ?>">Sign In</a>
-                    <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="#downloads">View Downloads</a>
+                    <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="<?= site_url('/') . '#login' ?>">Sign In</a>
+                    <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50" href="#downloads">View Documents</a>
                 </div>
 
                 <dl class="mt-10 grid gap-4 sm:grid-cols-3">
                     <?php foreach ([
-                        ['label' => 'CSRF', 'value' => 'Protected'],
-                        ['label' => 'UI', 'value' => 'Responsive'],
-                        ['label' => 'Flow', 'value' => 'Fast signup'],
+                        ['label' => 'Stipend', 'value' => 'BDT 15,000'],
+                        ['label' => 'Duration', 'value' => '3 months'],
+                        ['label' => 'Coverage', 'value' => 'UGC universities'],
                     ] as $item): ?>
                         <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
                             <dt class="text-sm text-slate-500"><?= esc($item['label']) ?></dt>
@@ -61,7 +62,7 @@
                 </dl>
             </div>
 
-            <div class="lg:pl-4">
+            <div class="lg:pl-4" id="login">
                 <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
                     <div class="inline-flex rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Sign in</div>
                     <h2 class="mt-4 text-2xl font-semibold tracking-tight text-slate-950">Welcome back</h2>
@@ -106,118 +107,85 @@
         </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div class="overflow-hidden rounded-[2rem] border border-amber-200 bg-amber-50 shadow-soft">
-            <div class="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
-                <div class="p-6 sm:p-8 lg:p-10">
-                    <div class="inline-flex items-center rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-800">
-                        Under maintenance
-                    </div>
-                    <h2 class="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                        We’re making the ISSP portal even better.
-                    </h2>
-                    <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                        Some sections of the site may be temporarily updated while we improve stability, performance, and the overall user experience. Public pages remain available unless otherwise stated.
-                    </p>
-
-                    <div class="mt-6 grid gap-3 sm:grid-cols-3">
-                        <?php foreach ([
-                            ['label' => 'Status', 'value' => 'Limited access'],
-                            ['label' => 'Support', 'value' => 'Available'],
-                            ['label' => 'Updates', 'value' => 'In progress'],
-                        ] as $item): ?>
-                            <div class="rounded-3xl border border-amber-200 bg-white p-4">
-                                <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"><?= esc($item['label']) ?></div>
-                                <div class="mt-2 text-base font-semibold text-slate-950"><?= esc($item['value']) ?></div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <div class="mt-6 flex flex-wrap gap-3">
-                        <a class="inline-flex items-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" href="<?= site_url('login') ?>">
-                            Sign In
-                        </a>
-                        <a class="inline-flex items-center rounded-full border border-amber-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-amber-100" href="<?= site_url('signup') ?>">
-                            Create Account
-                        </a>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-center bg-gradient-to-br from-amber-100 via-amber-50 to-white p-6 sm:p-8 lg:p-10">
-                    <div class="w-full max-w-md rounded-[2rem] border border-amber-200 bg-white p-6 shadow-soft">
-                        <div class="flex items-center gap-3">
-                            <span class="grid h-12 w-12 place-items-center rounded-2xl bg-amber-100 text-amber-800">
-                                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M12 2v4" />
-                                    <path d="M12 18v4" />
-                                    <path d="M4.93 4.93l2.83 2.83" />
-                                    <path d="M16.24 16.24l2.83 2.83" />
-                                    <path d="M2 12h4" />
-                                    <path d="M18 12h4" />
-                                    <path d="M4.93 19.07l2.83-2.83" />
-                                    <path d="M16.24 7.76l2.83-2.83" />
-                                    <circle cx="12" cy="12" r="3" />
-                                </svg>
-                            </span>
-                            <div>
-                                <p class="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Maintenance mode</p>
-                                <h3 class="mt-1 text-xl font-semibold text-slate-950">Brief service window</h3>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 space-y-4">
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <div class="text-sm font-semibold text-slate-950">What this means</div>
-                                <p class="mt-1 text-sm leading-6 text-slate-600">Some pages may be temporarily unavailable while updates are applied.</p>
-                            </div>
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <div class="text-sm font-semibold text-slate-950">What you can do</div>
-                                <p class="mt-1 text-sm leading-6 text-slate-600">You can still sign in, create an account, and return once maintenance is complete.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="features" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div class="max-w-2xl">
-            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Features</p>
-            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Clear, focused, and easy to use</h2>
-            <p class="mt-4 text-slate-600">The interface is designed to be calm and readable on mobile and desktop, with no unnecessary complexity.</p>
+    <section id="overview" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div class="max-w-3xl">
+            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Program overview</p>
+            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">What the program offers</h2>
+            <p class="mt-4 text-slate-600">
+                ICSETEP Domestic Internship is a 3-month stipend-supported placement program for undergraduate students in CSE and IT fields across UGC-affiliated universities in Bangladesh, with separate allocations managed by DU, BUET, and JUST.
+            </p>
         </div>
 
-        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="mt-8 grid gap-4 md:grid-cols-3">
             <?php foreach ([
-                ['title' => 'Fast registration', 'text' => 'A streamlined signup form with validation and clear feedback.'],
-                ['title' => 'Accessible forms', 'text' => 'Keyboard-friendly inputs, labels, and visible focus states.'],
-                ['title' => 'Secure defaults', 'text' => 'CSRF protection, hashed passwords, and server-side rules.'],
-                ['title' => 'Responsive dashboard', 'text' => 'A consistent layout for desktop, tablet, and mobile users.'],
-            ] as $feature): ?>
+                ['title' => 'Stipend support', 'text' => 'BDT 15,000 total — BDT 5,000 per month for the 3-month internship period.'],
+                ['title' => 'Nationwide access', 'text' => 'Open to students from all UGC-affiliated universities except the three PIU universities with their own allocations.'],
+                ['title' => 'Two application tracks', 'text' => 'Choose either Industry Attachment or Industry-Collaboration Capstone Project.'],
+            ] as $card): ?>
                 <article class="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
-                    <h3 class="text-lg font-semibold text-slate-950"><?= esc($feature['title']) ?></h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-600"><?= esc($feature['text']) ?></p>
+                    <h3 class="text-lg font-semibold text-slate-950"><?= esc($card['title']) ?></h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600"><?= esc($card['text']) ?></p>
                 </article>
             <?php endforeach; ?>
         </div>
     </section>
 
-    <section id="process" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+    <section id="tracks" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div class="max-w-2xl">
+            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Tracks</p>
+            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Two ways to participate</h2>
+            <p class="mt-4 text-slate-600">Applicants choose one domestic internship category when they apply.</p>
+        </div>
+
+        <div class="mt-8 grid gap-4 lg:grid-cols-2">
+            <article class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
+                <p class="text-sm font-semibold uppercase tracking-[0.16em] text-brand-700">Track 1</p>
+                <h3 class="mt-3 text-2xl font-semibold text-slate-950">Industry Attachment</h3>
+                <p class="mt-4 text-sm leading-6 text-slate-600">
+                    A full-time placement of at least 3 months in a software or IT organisation, jointly supervised by an industry mentor and an academic supervisor.
+                </p>
+                <ul class="mt-5 space-y-3 text-sm text-slate-600">
+                    <li>Host organisation must be recommended by the university.</li>
+                    <li>Should be a BCS, BASIS, BACCO, or ISPAB member, a licensed Hi-Tech Park entity, or a renowned national or multinational office in Bangladesh.</li>
+                    <li>Must have 50+ employees and provide a safe, gender-responsive work environment.</li>
+                    <li>A consent letter from the host organisation is required.</li>
+                </ul>
+            </article>
+
+            <article class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
+                <p class="text-sm font-semibold uppercase tracking-[0.16em] text-brand-700">Track 2</p>
+                <h3 class="mt-3 text-2xl font-semibold text-slate-950">Industry-Collaboration Capstone Project</h3>
+                <p class="mt-4 text-sm leading-6 text-slate-600">
+                    A team-based, year-long project that solves a real industry problem, jointly supervised by an academic supervisor and an industry mentor.
+                </p>
+                <ul class="mt-5 space-y-3 text-sm text-slate-600">
+                    <li>Each team member applies individually.</li>
+                    <li>Teams with at least one female student are encouraged.</li>
+                    <li>Female-inclusive teams receive tiebreaker preference in scoring.</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+
+    <section id="eligibility" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft sm:p-8">
-            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">How it works</p>
-            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Four simple steps</h2>
-            <div class="mt-8 grid gap-4 lg:grid-cols-4">
+            <div class="max-w-2xl">
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Eligibility</p>
+                <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Who can apply</h2>
+            </div>
+
+            <div class="mt-8 grid gap-4 md:grid-cols-2">
                 <?php foreach ([
-                    'Create Account',
-                    'Complete Profile',
-                    'Submit Application',
-                    'Track Progress',
-                ] as $index => $step): ?>
-                    <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                        <div class="grid h-10 w-10 place-items-center rounded-2xl bg-slate-950 text-sm font-semibold text-white"><?= esc($index + 1) ?></div>
-                        <h3 class="mt-4 text-lg font-semibold text-slate-950"><?= esc($step) ?></h3>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">A straightforward step in the ISSP application journey.</p>
+                    'Regular undergraduate student in a CSE or IT programme',
+                    'Registered for the internship or capstone course',
+                    'Completed at least 75% of required graduation credits',
+                    'Minimum CGPA of 2.75 on a 4.00 scale',
+                    'May apply to only one domestic internship category',
+                    'Must not be currently receiving another internship stipend or employed',
+                ] as $item): ?>
+                    <div class="flex items-start gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                        <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">✓</span>
+                        <p class="text-sm leading-6 text-slate-700"><?= esc($item) ?></p>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -226,27 +194,45 @@
 
     <section id="downloads" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="max-w-2xl">
-            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Downloads</p>
+            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Documents</p>
             <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Important documents</h2>
         </div>
 
-        <div class="mt-8 grid gap-4 md:grid-cols-3">
-            <?php foreach ([
-                ['title' => 'Application Guidelines', 'state' => 'Available'],
-                ['title' => 'Project Operations Manual', 'state' => 'Available'],
-                ['title' => 'Evaluation Guidelines', 'state' => 'Coming soon'],
-            ] as $doc): ?>
-                <article class="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
-                    <div class="flex items-start justify-between gap-4">
-                        <h3 class="text-lg font-semibold text-slate-950"><?= esc($doc['title']) ?></h3>
-                        <span class="rounded-full <?= $doc['state'] === 'Coming soon' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' ?> px-3 py-1 text-xs font-semibold">
-                            <?= esc($doc['state']) ?>
-                        </span>
-                    </div>
-                    <p class="mt-3 text-sm leading-6 text-slate-600">Use the portal signup page to continue into the application flow.</p>
-                    <a class="mt-5 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-800" href="<?= site_url('signup') ?>">Get started</a>
-                </article>
-            <?php endforeach; ?>
+        <div class="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-soft">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
+                        <tr>
+                            <th class="px-5 py-4 font-semibold">Document</th>
+                            <th class="px-5 py-4 font-semibold">Description</th>
+                            <th class="px-5 py-4 font-semibold">Status</th>
+                            <th class="px-5 py-4 font-semibold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <?php foreach ([
+                            ['title' => 'Application Guidelines', 'state' => 'Available'],
+                            ['title' => 'Project Operations Manual', 'state' => 'Available'],
+                            ['title' => 'Evaluation Guidelines', 'state' => 'Coming soon'],
+                        ] as $doc): ?>
+                            <tr>
+                                <td class="px-5 py-4 font-semibold text-slate-950"><?= esc($doc['title']) ?></td>
+                                <td class="px-5 py-4 text-slate-600">Program documents, reporting templates, and selection guidance for the domestic internship cycle.</td>
+                                <td class="px-5 py-4">
+                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold <?= $doc['state'] === 'Coming soon' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' ?>">
+                                        <?= esc($doc['state']) ?>
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4">
+                                    <a class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition hover:border-slate-300 hover:bg-slate-50" href="<?= site_url('signup') ?>">
+                                        Apply now
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 
@@ -255,13 +241,13 @@
             <div class="max-w-2xl">
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">Support</p>
                 <h2 class="mt-3 text-3xl font-semibold tracking-tight">Need help getting started?</h2>
-                <p class="mt-4 text-slate-300">If you need help with login, signup, or the application flow, use the portal support channel for assistance.</p>
+                <p class="mt-4 text-slate-300">If you need help with eligibility, document submission, or internship track selection, use the portal support channel for assistance.</p>
                 <div class="mt-6 flex flex-wrap gap-3 text-sm text-slate-200">
                     <span class="rounded-full bg-white/10 px-4 py-2">support@issp.gov.bd</span>
                     <span class="rounded-full bg-white/10 px-4 py-2">+880 2 0000 0000</span>
                 </div>
                 <div class="mt-8 flex flex-wrap gap-3">
-                    <a class="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100" href="<?= site_url('login') ?>">Sign In</a>
+                    <a class="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100" href="<?= site_url('/') . '#login' ?>">Sign In</a>
                     <a class="inline-flex items-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10" href="<?= site_url('signup') ?>">Create Account</a>
                 </div>
             </div>
@@ -274,17 +260,17 @@
                 <div class="flex items-center gap-3">
                     <span class="grid h-10 w-10 place-items-center rounded-2xl bg-slate-950 text-sm font-extrabold text-white">IS</span>
                     <div>
-                        <p class="font-semibold text-slate-950">Institutional Support and Services Project</p>
-                        <p class="text-slate-500">A modern native CI4 portal</p>
+                        <p class="font-semibold text-slate-950">ICSETEP Domestic Internship Portal</p>
+                        <p class="text-slate-500">Managed through UGC Bangladesh and PMU</p>
                     </div>
                 </div>
-                <p class="mt-4 max-w-xl">Secure registration, application tracking, and document access for the ISSP program.</p>
+                <p class="mt-4 max-w-xl">Secure registration, application tracking, and document access for the ICSETEP domestic internship cycle.</p>
             </div>
 
             <div>
                 <p class="font-semibold text-slate-950">Quick links</p>
                 <div class="mt-3 grid gap-2">
-                    <a class="transition hover:text-slate-950" href="<?= site_url('login') ?>">Sign In</a>
+                    <a class="transition hover:text-slate-950" href="<?= site_url('/') . '#login' ?>">Sign In</a>
                     <a class="transition hover:text-slate-950" href="<?= site_url('signup') ?>">Create Account</a>
                     <a class="transition hover:text-slate-950" href="#downloads">Downloads</a>
                 </div>
